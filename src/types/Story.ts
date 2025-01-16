@@ -6,5 +6,6 @@ export interface Story {
   description: string;
   duration: string;
   category: StoryCategory;
+  content: string;
   audioUrl?: string;
 }

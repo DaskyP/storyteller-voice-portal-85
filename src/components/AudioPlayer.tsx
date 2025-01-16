@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -9,11 +9,17 @@ interface AudioPlayerProps {
   onPlayPause: () => void;
   onNext: () => void;
   onPrevious: () => void;
+  onVolumeChange: (value: number[]) => void;
 }
 
-const AudioPlayer = ({ title, isPlaying, onPlayPause, onNext, onPrevious }: AudioPlayerProps) => {
-  const [volume, setVolume] = useState([100]);
-
+const AudioPlayer = ({ 
+  title, 
+  isPlaying, 
+  onPlayPause, 
+  onNext, 
+  onPrevious,
+  onVolumeChange 
+}: AudioPlayerProps) => {
   return (
     <div 
       className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg"
@@ -37,7 +43,7 @@ const AudioPlayer = ({ title, isPlaying, onPlayPause, onNext, onPrevious }: Audi
             </Button>
 
             <Button
-              className="w-12 h-12 rounded-full bg-primary hover:bg-primary-hover"
+              className="w-12 h-12 rounded-full bg-green-600 hover:bg-green-700"
               onClick={onPlayPause}
               aria-label={isPlaying ? "Pausar" : "Reproducir"}
             >
@@ -59,10 +65,10 @@ const AudioPlayer = ({ title, isPlaying, onPlayPause, onNext, onPrevious }: Audi
 
             <div className="w-32">
               <Slider
-                value={volume}
-                onValueChange={setVolume}
+                defaultValue={[100]}
                 max={100}
                 step={1}
+                onValueChange={onVolumeChange}
                 aria-label="Control de volumen"
               />
             </div>

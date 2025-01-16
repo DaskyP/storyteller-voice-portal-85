@@ -1,27 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import StoryList from '@/components/StoryList';
 import AudioPlayer from '@/components/AudioPlayer';
 import { useConversation } from '@11labs/react';
 import { Button } from '@/components/ui/button';
-import { StoryCategory } from '../types/Story';
+import { StoryCategory, Story } from '../types/Story';
 import { Mic } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentStory, setCurrentStory] = useState("El Principito");
+  const [currentStory, setCurrentStory] = useState<Story | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<StoryCategory | undefined>();
+  const [volume, setVolume] = useState(1);
   const conversation = useConversation();
+  const { toast } = useToast();
+
+  const handlePlayStory = async (story: Story) => {
+    setCurrentStory(story);
+    setIsPlaying(true);
+    
+    try {
+      await conversation.startSession({
+        agentId: "YOUR_AGENT_ID", // Necesitarás crear un agente en ElevenLabs
+      });
+      
+      // Iniciar la narración del cuento
+      conversation.setVolume({ volume });
+    } catch (error) {
+      console.error("Error al iniciar la narración:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo iniciar la narración. Por favor, intente nuevamente.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
   };
 
   const handleNext = () => {
-    console.log("Siguiente historia");
+    if (!currentStory) return;
+    
+    const stories = document.querySelectorAll('[role="article"]');
+    const currentIndex = Array.from(stories).findIndex(
+      story => story.getAttribute('aria-label')?.includes(currentStory.title)
+    );
+    
+    if (currentIndex < stories.length - 1) {
+      const nextStory = stories[currentIndex + 1];
+      nextStory.querySelector('button')?.click();
+    }
   };
 
   const handlePrevious = () => {
-    console.log("Historia anterior");
+    if (!currentStory) return;
+    
+    const stories = document.querySelectorAll('[role="article"]');
+    const currentIndex = Array.from(stories).findIndex(
+      story => story.getAttribute('aria-label')?.includes(currentStory.title)
+    );
+    
+    if (currentIndex > 0) {
+      const previousStory = stories[currentIndex - 1];
+      previousStory.querySelector('button')?.click();
+    }
+  };
+
+  const handleVolumeChange = (newVolume: number[]) => {
+    const volumeValue = newVolume[0] / 100;
+    setVolume(volumeValue);
+    if (conversation) {
+      conversation.setVolume({ volume: volumeValue });
+    }
   };
 
   const startVoiceControl = async () => {
@@ -30,8 +82,18 @@ const Index = () => {
       await conversation.startSession({
         agentId: "YOUR_AGENT_ID", // Necesitarás crear un agente en ElevenLabs
       });
+      
+      toast({
+        title: "Control por voz activado",
+        description: "Puede usar comandos de voz para controlar la reproducción.",
+      });
     } catch (error) {
       console.error("Error al iniciar el control por voz:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo activar el control por voz. Por favor, verifique los permisos del micrófono.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -79,16 +141,22 @@ const Index = () => {
           aria-label="Lista de cuentos disponibles"
           className="mb-24"
         >
-          <StoryList selectedCategory={selectedCategory} />
+          <StoryList 
+            selectedCategory={selectedCategory}
+            onPlayStory={handlePlayStory}
+          />
         </section>
 
-        <AudioPlayer
-          title={currentStory}
-          isPlaying={isPlaying}
-          onPlayPause={handlePlayPause}
-          onNext={handleNext}
-          onPrevious={handlePrevious}
-        />
+        {currentStory && (
+          <AudioPlayer
+            title={currentStory.title}
+            isPlaying={isPlaying}
+            onPlayPause={handlePlayPause}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+            onVolumeChange={handleVolumeChange}
+          />
+        )}
       </main>
     </div>
   );
