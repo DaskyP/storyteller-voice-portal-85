@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import StoryList from '@/components/StoryList';
 import AudioPlayer from '@/components/AudioPlayer';
-import { useConversation } from '@11labs/react';
 import { Button } from '@/components/ui/button';
 import { StoryCategory, Story } from '../types/Story';
 import { Mic } from 'lucide-react';
@@ -12,32 +11,57 @@ const Index = () => {
   const [currentStory, setCurrentStory] = useState<Story | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<StoryCategory | undefined>();
   const [volume, setVolume] = useState(1);
-  const conversation = useConversation();
   const { toast } = useToast();
+  const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesis | null>(null);
+  const [speechUtterance, setSpeechUtterance] = useState<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => {
+    if (window.speechSynthesis) {
+      setSpeechSynthesis(window.speechSynthesis);
+    }
+  }, []);
 
   const handlePlayStory = async (story: Story) => {
     setCurrentStory(story);
-    setIsPlaying(true);
     
-    try {
-      await conversation.startSession({
-        agentId: "YOUR_AGENT_ID", // Necesitarás crear un agente en ElevenLabs
-      });
+    if (speechSynthesis && story.content) {
+      // Detener cualquier narración en curso
+      speechSynthesis.cancel();
       
-      // Iniciar la narración del cuento
-      conversation.setVolume({ volume });
-    } catch (error) {
-      console.error("Error al iniciar la narración:", error);
+      // Crear nueva utterance
+      const utterance = new SpeechSynthesisUtterance(story.content);
+      utterance.volume = volume;
+      utterance.lang = 'es-ES'; // Establecer idioma a español
+      
+      // Guardar la utterance actual
+      setSpeechUtterance(utterance);
+      
+      // Iniciar narración
+      speechSynthesis.speak(utterance);
+      setIsPlaying(true);
+      
+      // Manejar cuando termina la narración
+      utterance.onend = () => {
+        setIsPlaying(false);
+      };
+    } else {
       toast({
         title: "Error",
-        description: "No se pudo iniciar la narración. Por favor, intente nuevamente.",
+        description: "Tu navegador no soporta la síntesis de voz.",
         variant: "destructive"
       });
     }
   };
 
   const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
+    if (speechSynthesis) {
+      if (isPlaying) {
+        speechSynthesis.pause();
+      } else {
+        speechSynthesis.resume();
+      }
+      setIsPlaying(!isPlaying);
+    }
   };
 
   const handleNext = () => {
@@ -71,17 +95,30 @@ const Index = () => {
   const handleVolumeChange = (newVolume: number[]) => {
     const volumeValue = newVolume[0] / 100;
     setVolume(volumeValue);
-    if (conversation) {
-      conversation.setVolume({ volume: volumeValue });
+    if (speechUtterance) {
+      speechUtterance.volume = volumeValue;
     }
   };
 
   const startVoiceControl = async () => {
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      await conversation.startSession({
-        agentId: "YOUR_AGENT_ID", // Necesitarás crear un agente en ElevenLabs
-      });
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'es-ES';
+      recognition.continuous = true;
+      
+      recognition.onresult = (event) => {
+        const command = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        
+        if (command.includes('reproducir') || command.includes('play')) {
+          handlePlayPause();
+        } else if (command.includes('siguiente') || command.includes('next')) {
+          handleNext();
+        } else if (command.includes('anterior') || command.includes('previous')) {
+          handlePrevious();
+        }
+      };
+      
+      recognition.start();
       
       toast({
         title: "Control por voz activado",
