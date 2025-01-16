@@ -102,7 +102,8 @@ const Index = () => {
 
   const startVoiceControl = async () => {
     try {
-      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
       recognition.lang = 'es-ES';
       recognition.continuous = true;
       
