@@ -11,27 +11,64 @@ const Index = () => {
   const [currentStory, setCurrentStory] = useState<Story | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<StoryCategory | undefined>();
   const [volume, setVolume] = useState(1);
-  const { toast } = useToast();
-  const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesis | null>(null);
-  const [speechUtterance, setSpeechUtterance] = useState<SpeechSynthesisUtterance | null>(null);
   const [voiceControlActive, setVoiceControlActive] = useState(false);
+  const { toast } = useToast();
+  const [speechUtterance, setSpeechUtterance] = useState<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     // Asegurarnos de que speechSynthesis esté disponible
     if (typeof window !== 'undefined' && window.speechSynthesis) {
-      setSpeechSynthesis(window.speechSynthesis);
+      const handleKeyPress = (event: KeyboardEvent) => {
+        if (event.key.toLowerCase() === 'z') {
+          event.preventDefault();
+          speakCommands();
+        } else if (event.ctrlKey) {
+          event.preventDefault();
+          startVoiceControl();
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyPress);
+      return () => window.removeEventListener('keydown', handleKeyPress);
+    }
+  }, []);
+
+  const speakFeedback = (message: string) => {
+    if (!window.speechSynthesis) return;
+    
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(message);
+    utterance.lang = 'es-ES';
+    utterance.rate = 0.9;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const listCurrentStories = () => {
+    if (!selectedCategory) {
+      speakFeedback("No hay ninguna sección seleccionada actualmente");
+      return;
     }
 
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === 'z') {
-        event.preventDefault();
-        speakCommands();
-      }
-    };
+    const stories = document.querySelectorAll('[role="article"]');
+    let message = `Estás en la sección ${getCategoryName(selectedCategory)}. Los cuentos disponibles son: `;
+    
+    stories.forEach((story, index) => {
+      const title = story.getAttribute('aria-label')?.split(',')[0] || '';
+      message += `${index + 1} para ${title}, `;
+    });
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, []);
+    speakFeedback(message);
+  };
+
+  const getCategoryName = (category: StoryCategory): string => {
+    const categoryMap = {
+      sleep: 'dormir',
+      fun: 'diversión',
+      educational: 'educativo',
+      adventure: 'aventuras'
+    };
+    return categoryMap[category];
+  };
 
   const speakCommands = () => {
     if (!window.speechSynthesis) {
@@ -43,12 +80,12 @@ const Index = () => {
       return;
     }
 
-    // Detener cualquier narración en curso
     window.speechSynthesis.cancel();
 
     const commands = `
       Comandos disponibles:
       Z: Escuchar lista de comandos
+      Control: Activar control por voz
       Comandos de voz:
       "reproducir" o "play": Reproducir o pausar cuento actual
       "siguiente" o "next": Siguiente cuento
@@ -57,11 +94,12 @@ const Index = () => {
       "diversión": Ir a sección de diversión
       "educativo": Ir a sección educativa
       "aventuras": Ir a sección de aventuras
+      "listar": Escuchar lista de cuentos en la sección actual
     `;
 
     const utterance = new SpeechSynthesisUtterance(commands);
     utterance.lang = 'es-ES';
-    utterance.rate = 0.9; // Velocidad ligeramente más lenta para mejor comprensión
+    utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
   };
 
@@ -98,8 +136,10 @@ const Index = () => {
     
     if (isPlaying) {
       window.speechSynthesis.pause();
+      speakFeedback("Comando recibido: pausar narración");
     } else {
       window.speechSynthesis.resume();
+      speakFeedback("Comando recibido: reanudar narración");
     }
     setIsPlaying(!isPlaying);
   };
@@ -113,6 +153,7 @@ const Index = () => {
     );
     
     if (currentIndex < stories.length - 1) {
+      speakFeedback("Comando recibido: siguiente cuento");
       const nextStory = stories[currentIndex + 1];
       nextStory.querySelector('button')?.click();
     }
@@ -127,6 +168,7 @@ const Index = () => {
     );
     
     if (currentIndex > 0) {
+      speakFeedback("Comando recibido: cuento anterior");
       const previousStory = stories[currentIndex - 1];
       previousStory.querySelector('button')?.click();
     }
@@ -167,22 +209,25 @@ const Index = () => {
           handlePrevious();
         } else if (command.includes('dormir')) {
           setSelectedCategory('sleep');
+          speakFeedback("Comando recibido: cambiando a sección dormir");
         } else if (command.includes('diversión')) {
           setSelectedCategory('fun');
+          speakFeedback("Comando recibido: cambiando a sección diversión");
         } else if (command.includes('educativo')) {
           setSelectedCategory('educational');
+          speakFeedback("Comando recibido: cambiando a sección educativa");
         } else if (command.includes('aventuras')) {
           setSelectedCategory('adventure');
+          speakFeedback("Comando recibido: cambiando a sección aventuras");
+        } else if (command.includes('listar')) {
+          listCurrentStories();
         }
       };
       
       recognition.start();
       setVoiceControlActive(true);
       
-      toast({
-        title: "Control por voz activado",
-        description: "Presiona Z para escuchar los comandos disponibles.",
-      });
+      speakFeedback("Control por voz activado. Presiona Z para escuchar los comandos disponibles.");
     } catch (error) {
       console.error("Error al iniciar el control por voz:", error);
       toast({
@@ -208,7 +253,7 @@ const Index = () => {
             Cuentacuentos Accesible
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8" tabIndex={0}>
-            Presiona la tecla Z en cualquier momento para escuchar los comandos disponibles.
+            Presiona <strong>Control</strong> para activar el control por voz, o <strong>Z</strong> para escuchar los comandos disponibles.
           </p>
           <Button
             onClick={startVoiceControl}
