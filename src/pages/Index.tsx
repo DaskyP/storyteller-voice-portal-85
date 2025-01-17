@@ -14,12 +14,49 @@ const Index = () => {
   const { toast } = useToast();
   const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesis | null>(null);
   const [speechUtterance, setSpeechUtterance] = useState<SpeechSynthesisUtterance | null>(null);
+  const [voiceControlActive, setVoiceControlActive] = useState(false);
 
   useEffect(() => {
     if (window.speechSynthesis) {
       setSpeechSynthesis(window.speechSynthesis);
     }
+
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.ctrlKey && !event.shiftKey && !event.altKey) {
+        startVoiceControl();
+      }
+
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        speakCommands();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
+
+  const speakCommands = () => {
+    if (speechSynthesis) {
+      speechSynthesis.cancel();
+      const commands = `
+        Comandos disponibles:
+        Control: Activar control por voz
+        Tab: Escuchar lista de comandos
+        Comandos de voz:
+        "reproducir" o "play": Reproducir o pausar cuento actual
+        "siguiente" o "next": Siguiente cuento
+        "anterior" o "previous": Cuento anterior
+        "dormir": Ir a sección para dormir
+        "diversión": Ir a sección de diversión
+        "educativo": Ir a sección educativa
+        "aventuras": Ir a sección de aventuras
+      `;
+      const utterance = new SpeechSynthesisUtterance(commands);
+      utterance.lang = 'es-ES';
+      speechSynthesis.speak(utterance);
+    }
+  };
 
   const handlePlayStory = async (story: Story) => {
     setCurrentStory(story);
@@ -116,14 +153,23 @@ const Index = () => {
           handleNext();
         } else if (command.includes('anterior') || command.includes('previous')) {
           handlePrevious();
+        } else if (command.includes('dormir')) {
+          setSelectedCategory('sleep');
+        } else if (command.includes('diversión')) {
+          setSelectedCategory('fun');
+        } else if (command.includes('educativo')) {
+          setSelectedCategory('educational');
+        } else if (command.includes('aventuras')) {
+          setSelectedCategory('adventure');
         }
       };
       
       recognition.start();
+      setVoiceControlActive(true);
       
       toast({
         title: "Control por voz activado",
-        description: "Puede usar comandos de voz para controlar la reproducción.",
+        description: "Presiona Tab para escuchar los comandos disponibles.",
       });
     } catch (error) {
       console.error("Error al iniciar el control por voz:", error);
@@ -150,14 +196,17 @@ const Index = () => {
             Cuentacuentos Accesible
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8" tabIndex={0}>
-            Disfruta de hermosas historias narradas especialmente para personas con discapacidad visual
+            Disfruta de hermosas historias narradas especialmente para personas con discapacidad visual.
+            Presiona Control para activar el control por voz, o Tab para escuchar los comandos disponibles.
           </p>
           <Button
             onClick={startVoiceControl}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto"
+            className={`bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto ${
+              voiceControlActive ? 'ring-2 ring-green-400' : ''
+            }`}
           >
             <Mic className="w-5 h-5" />
-            Activar Control por Voz
+            {voiceControlActive ? 'Control por Voz Activo' : 'Activar Control por Voz'}
           </Button>
         </header>
 
