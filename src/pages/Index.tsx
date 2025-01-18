@@ -41,18 +41,21 @@ const Index = () => {
   };
 
   const listCurrentStories = () => {
-    const stories = document.querySelectorAll('[role="article"]');
+    const filteredStories = selectedCategory 
+      ? stories.filter(story => story.category === selectedCategory)
+      : stories;
     
-    if (!selectedCategory || stories.length === 0) {
+    if (filteredStories.length === 0) {
       speakFeedback("No hay cuentos disponibles en esta sección");
       return;
     }
 
-    let message = `Estás en la sección ${getCategoryName(selectedCategory)}. Los cuentos disponibles son: `;
+    let message = selectedCategory 
+      ? `En la sección ${getCategoryName(selectedCategory)}, los cuentos disponibles son: `
+      : "Los cuentos disponibles son: ";
     
-    stories.forEach((story, index) => {
-      const title = story.getAttribute('aria-label')?.replace('Cuento: ', '') || '';
-      message += `${index + 1} para ${title}, `;
+    filteredStories.forEach((story, index) => {
+      message += `${story.title}${index < filteredStories.length - 1 ? ', ' : '.'}`;
     });
 
     speakFeedback(message);
@@ -66,40 +69,6 @@ const Index = () => {
       adventure: 'aventuras'
     };
     return categoryMap[category];
-  };
-
-  const speakCommands = () => {
-    if (!window.speechSynthesis) {
-      toast({
-        title: "Error",
-        description: "Tu navegador no soporta la síntesis de voz.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-
-    const commands = `
-      Comandos disponibles:
-      Z: Escuchar lista de comandos
-      Control: Activar control por voz
-      Comandos de voz:
-      "reproducir" o "play": Reproducir o pausar cuento actual
-      "siguiente" o "next": Siguiente cuento
-      "anterior" o "previous": Cuento anterior
-      "dormir": Ir a sección para dormir
-      "diversión": Ir a sección de diversión
-      "educativo": Ir a sección educativa
-      "aventuras": Ir a sección de aventuras
-      "listar": Escuchar lista de cuentos en la sección actual
-      "reproducir" seguido del título del cuento: Para reproducir un cuento específico
-    `;
-
-    const utterance = new SpeechSynthesisUtterance(commands);
-    utterance.lang = 'es-ES';
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
   };
 
   const splitTextIntoChunks = (text: string): string[] => {
@@ -248,19 +217,19 @@ const Index = () => {
             handlePlayPause();
           } else {
             // Buscar si el comando incluye el título de algún cuento
-            const stories = document.querySelectorAll('[role="article"]');
-            let found = false;
+            const storyTitle = command.replace('reproducir', '').trim();
+            const filteredStories = selectedCategory 
+              ? stories.filter(story => story.category === selectedCategory)
+              : stories;
             
-            stories.forEach((story) => {
-              const title = story.getAttribute('aria-label')?.split(':')[1]?.toLowerCase().trim() || '';
-              if (command.includes(title)) {
-                found = true;
-                speakFeedback(`Comando recibido: reproducir ${title}`);
-                story.querySelector('button')?.click();
-              }
-            });
+            const foundStory = filteredStories.find(story => 
+              story.title.toLowerCase().includes(storyTitle)
+            );
             
-            if (!found) {
+            if (foundStory) {
+              speakFeedback(`Reproduciendo ${foundStory.title}`);
+              handlePlayStory(foundStory);
+            } else {
               speakFeedback("No se encontró el cuento especificado");
             }
           }
@@ -270,16 +239,16 @@ const Index = () => {
           handlePrevious();
         } else if (command.includes('dormir')) {
           setSelectedCategory('sleep');
-          speakFeedback("Comando recibido: cambiando a sección dormir");
+          speakFeedback("Cambiando a sección dormir");
         } else if (command.includes('diversión')) {
           setSelectedCategory('fun');
-          speakFeedback("Comando recibido: cambiando a sección diversión");
+          speakFeedback("Cambiando a sección diversión");
         } else if (command.includes('educativo')) {
           setSelectedCategory('educational');
-          speakFeedback("Comando recibido: cambiando a sección educativa");
+          speakFeedback("Cambiando a sección educativa");
         } else if (command.includes('aventuras')) {
           setSelectedCategory('adventure');
-          speakFeedback("Comando recibido: cambiando a sección aventuras");
+          speakFeedback("Cambiando a sección aventuras");
         } else if (command.includes('listar')) {
           listCurrentStories();
         }
