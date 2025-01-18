@@ -16,21 +16,18 @@ const Index = () => {
   const [speechUtterance, setSpeechUtterance] = useState<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
-    // Asegurarnos de que speechSynthesis esté disponible
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      const handleKeyPress = (event: KeyboardEvent) => {
-        if (event.key.toLowerCase() === 'z') {
-          event.preventDefault();
-          speakCommands();
-        } else if (event.ctrlKey) {
-          event.preventDefault();
-          startVoiceControl();
-        }
-      };
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.ctrlKey) {
+        event.preventDefault();
+        startVoiceControl();
+      } else if (event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        speakCommands();
+      }
+    };
 
-      window.addEventListener('keydown', handleKeyPress);
-      return () => window.removeEventListener('keydown', handleKeyPress);
-    }
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
   const speakFeedback = (message: string) => {
@@ -104,6 +101,49 @@ const Index = () => {
     window.speechSynthesis.speak(utterance);
   };
 
+  // Función para dividir texto largo en segmentos más pequeños
+  const splitTextIntoChunks = (text: string): string[] => {
+    const maxLength = 200; // Longitud máxima por segmento
+    const chunks: string[] = [];
+    let currentChunk = '';
+    
+    // Dividir por oraciones
+    const sentences = text.split(/([.!?]+)\s+/);
+    
+    for (let i = 0; i < sentences.length; i++) {
+      const sentence = sentences[i];
+      
+      if ((currentChunk + sentence).length <= maxLength) {
+        currentChunk += sentence;
+      } else {
+        if (currentChunk) chunks.push(currentChunk.trim());
+        currentChunk = sentence;
+      }
+    }
+    
+    if (currentChunk) chunks.push(currentChunk.trim());
+    return chunks;
+  };
+
+  const speakTextInChunks = async (text: string, volume: number) => {
+    const chunks = splitTextIntoChunks(text);
+    
+    for (let i = 0; i < chunks.length; i++) {
+      const utterance = new SpeechSynthesisUtterance(chunks[i]);
+      utterance.volume = volume;
+      utterance.lang = 'es-ES';
+      utterance.rate = 0.9;
+      
+      // Esperar a que termine cada chunk antes de continuar
+      await new Promise<void>((resolve) => {
+        utterance.onend = () => resolve();
+        window.speechSynthesis.speak(utterance);
+      });
+    }
+    
+    setIsPlaying(false);
+  };
+
   const handlePlayStory = async (story: Story) => {
     if (!window.speechSynthesis) {
       toast({
@@ -116,20 +156,9 @@ const Index = () => {
 
     setCurrentStory(story);
     window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(story.content);
-    utterance.volume = volume;
-    utterance.lang = 'es-ES';
-    utterance.rate = 0.9;
-    
-    setSpeechUtterance(utterance);
-    
-    utterance.onend = () => {
-      setIsPlaying(false);
-    };
-
-    window.speechSynthesis.speak(utterance);
     setIsPlaying(true);
+    
+    await speakTextInChunks(story.content, volume);
   };
 
   const handlePlayPause = () => {
@@ -236,7 +265,7 @@ const Index = () => {
           listCurrentStories();
         }
       };
-      
+
       recognition.start();
       setVoiceControlActive(true);
       
@@ -298,11 +327,8 @@ const Index = () => {
           ))}
         </div>
 
-        <section 
-          aria-label="Lista de cuentos disponibles"
-          className="mb-24"
-        >
-          <StoryList 
+        <section aria-label="Lista de cuentos disponibles" className="mb-24">
+          <StoryList
             selectedCategory={selectedCategory}
             onPlayStory={handlePlayStory}
           />
