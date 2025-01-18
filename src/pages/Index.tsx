@@ -4,7 +4,7 @@ import AudioPlayer from '@/components/AudioPlayer';
 import { Button } from '@/components/ui/button';
 import { StoryCategory, Story } from '../types/Story';
 import { Mic } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -41,16 +41,17 @@ const Index = () => {
   };
 
   const listCurrentStories = () => {
-    if (!selectedCategory) {
-      speakFeedback("No hay ninguna sección seleccionada actualmente");
+    const stories = document.querySelectorAll('[role="article"]');
+    
+    if (!selectedCategory || stories.length === 0) {
+      speakFeedback("No hay cuentos disponibles en esta sección");
       return;
     }
 
-    const stories = document.querySelectorAll('[role="article"]');
     let message = `Estás en la sección ${getCategoryName(selectedCategory)}. Los cuentos disponibles son: `;
     
     stories.forEach((story, index) => {
-      const title = story.getAttribute('aria-label')?.split(',')[0] || '';
+      const title = story.getAttribute('aria-label')?.replace('Cuento: ', '') || '';
       message += `${index + 1} para ${title}, `;
     });
 
@@ -101,47 +102,58 @@ const Index = () => {
     window.speechSynthesis.speak(utterance);
   };
 
-  // Función para dividir texto largo en segmentos más pequeños
   const splitTextIntoChunks = (text: string): string[] => {
-    const maxLength = 200; // Longitud máxima por segmento
+    const maxLength = 150; // Reducido para evitar cortes
     const chunks: string[] = [];
+    
+    // Dividir por oraciones usando puntuación
+    const sentences = text.split(/([.!?]+)\s+/);
     let currentChunk = '';
     
-    // Dividir por oraciones
-    const sentences = text.split(/([.!?]+)\s+/);
-    
     for (let i = 0; i < sentences.length; i++) {
-      const sentence = sentences[i];
+      const sentence = sentences[i].trim();
+      
+      if (!sentence) continue;
       
       if ((currentChunk + sentence).length <= maxLength) {
-        currentChunk += sentence;
+        currentChunk += (currentChunk ? ' ' : '') + sentence;
       } else {
-        if (currentChunk) chunks.push(currentChunk.trim());
+        if (currentChunk) chunks.push(currentChunk);
         currentChunk = sentence;
       }
     }
     
-    if (currentChunk) chunks.push(currentChunk.trim());
+    if (currentChunk) chunks.push(currentChunk);
     return chunks;
   };
 
   const speakTextInChunks = async (text: string, volume: number) => {
-    const chunks = splitTextIntoChunks(text);
-    
-    for (let i = 0; i < chunks.length; i++) {
-      const utterance = new SpeechSynthesisUtterance(chunks[i]);
-      utterance.volume = volume;
-      utterance.lang = 'es-ES';
-      utterance.rate = 0.9;
+    try {
+      const chunks = splitTextIntoChunks(text);
       
-      // Esperar a que termine cada chunk antes de continuar
-      await new Promise<void>((resolve) => {
-        utterance.onend = () => resolve();
-        window.speechSynthesis.speak(utterance);
+      for (let i = 0; i < chunks.length; i++) {
+        await new Promise<void>((resolve, reject) => {
+          const utterance = new SpeechSynthesisUtterance(chunks[i]);
+          utterance.volume = volume;
+          utterance.lang = 'es-ES';
+          utterance.rate = 0.9;
+          
+          utterance.onend = () => resolve();
+          utterance.onerror = () => reject();
+          
+          window.speechSynthesis.speak(utterance);
+        });
+      }
+    } catch (error) {
+      console.error('Error al reproducir el texto:', error);
+      toast({
+        title: "Error",
+        description: "Hubo un error al reproducir el cuento.",
+        variant: "destructive"
       });
+    } finally {
+      setIsPlaying(false);
     }
-    
-    setIsPlaying(false);
   };
 
   const handlePlayStory = async (story: Story) => {
@@ -237,13 +249,20 @@ const Index = () => {
           } else {
             // Buscar si el comando incluye el título de algún cuento
             const stories = document.querySelectorAll('[role="article"]');
+            let found = false;
+            
             stories.forEach((story) => {
-              const title = story.getAttribute('aria-label')?.split(',')[0]?.toLowerCase() || '';
-              if (command.includes(title.toLowerCase())) {
+              const title = story.getAttribute('aria-label')?.split(':')[1]?.toLowerCase().trim() || '';
+              if (command.includes(title)) {
+                found = true;
                 speakFeedback(`Comando recibido: reproducir ${title}`);
                 story.querySelector('button')?.click();
               }
             });
+            
+            if (!found) {
+              speakFeedback("No se encontró el cuento especificado");
+            }
           }
         } else if (command.includes('siguiente') || command.includes('next')) {
           handleNext();
