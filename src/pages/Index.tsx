@@ -95,6 +95,7 @@ const Index = () => {
       "educativo": Ir a sección educativa
       "aventuras": Ir a sección de aventuras
       "listar": Escuchar lista de cuentos en la sección actual
+      "reproducir" seguido del título del cuento: Para reproducir un cuento específico
     `;
 
     const utterance = new SpeechSynthesisUtterance(commands);
@@ -202,7 +203,19 @@ const Index = () => {
         const command = event.results[event.results.length - 1][0].transcript.toLowerCase();
         
         if (command.includes('reproducir') || command.includes('play')) {
-          handlePlayPause();
+          if (command === 'reproducir' || command === 'play') {
+            handlePlayPause();
+          } else {
+            // Buscar si el comando incluye el título de algún cuento
+            const stories = document.querySelectorAll('[role="article"]');
+            stories.forEach((story) => {
+              const title = story.getAttribute('aria-label')?.split(',')[0]?.toLowerCase() || '';
+              if (command.includes(title.toLowerCase())) {
+                speakFeedback(`Comando recibido: reproducir ${title}`);
+                story.querySelector('button')?.click();
+              }
+            });
+          }
         } else if (command.includes('siguiente') || command.includes('next')) {
           handleNext();
         } else if (command.includes('anterior') || command.includes('previous')) {
@@ -226,6 +239,11 @@ const Index = () => {
       
       recognition.start();
       setVoiceControlActive(true);
+      
+      toast({
+        title: "Control por voz activado",
+        description: "Ahora puede usar los comandos de voz. Presione Z para escuchar los comandos disponibles.",
+      });
       
       speakFeedback("Control por voz activado. Presiona Z para escuchar los comandos disponibles.");
     } catch (error) {
