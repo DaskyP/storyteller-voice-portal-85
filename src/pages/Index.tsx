@@ -6,6 +6,27 @@ import { StoryCategory, Story } from '../types/Story';
 import { Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+// Definición de historias de ejemplo (esto debería venir de tu base de datos o API)
+const stories: Story[] = [
+  {
+    id: 1,
+    title: "El bosque mágico",
+    description: "Una aventura en un bosque encantado",
+    duration: "5 min",
+    category: "adventure",
+    content: "Había una vez en un bosque mágico..."
+  },
+  {
+    id: 2,
+    title: "La estrella dormilona",
+    description: "Un cuento para ir a dormir",
+    duration: "3 min",
+    category: "sleep",
+    content: "En lo alto del cielo había una estrella..."
+  },
+  // ... Agrega más historias según necesites
+];
+
 const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStory, setCurrentStory] = useState<Story | null>(null);
@@ -30,11 +51,35 @@ const Index = () => {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  const speakFeedback = (message: string) => {
-    if (!window.speechSynthesis) return;
-    
+  const speakCommands = () => {
+    if (!window.speechSynthesis) {
+      toast({
+        title: "Error",
+        description: "Tu navegador no soporta la síntesis de voz.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(message);
+
+    const commands = `
+      Comandos disponibles:
+      Z: Escuchar lista de comandos
+      Control: Activar control por voz
+      Comandos de voz:
+      "reproducir" o "play": Reproducir o pausar cuento actual
+      "siguiente" o "next": Siguiente cuento
+      "anterior" o "previous": Cuento anterior
+      "dormir": Ir a sección para dormir
+      "diversión": Ir a sección de diversión
+      "educativo": Ir a sección educativa
+      "aventuras": Ir a sección de aventuras
+      "listar": Escuchar lista de cuentos en la sección actual
+      "reproducir" seguido del título del cuento: Para reproducir un cuento específico
+    `;
+
+    const utterance = new SpeechSynthesisUtterance(commands);
     utterance.lang = 'es-ES';
     utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
@@ -216,7 +261,6 @@ const Index = () => {
           if (command === 'reproducir' || command === 'play') {
             handlePlayPause();
           } else {
-            // Buscar si el comando incluye el título de algún cuento
             const storyTitle = command.replace('reproducir', '').trim();
             const filteredStories = selectedCategory 
               ? stories.filter(story => story.category === selectedCategory)
@@ -338,3 +382,4 @@ const Index = () => {
 };
 
 export default Index;
+
