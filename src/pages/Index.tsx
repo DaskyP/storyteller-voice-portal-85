@@ -35,6 +35,17 @@ const Index = () => {
   const [voiceControlActive, setVoiceControlActive] = useState(false);
   const { toast } = useToast();
   const [speechUtterance, setSpeechUtterance] = useState<SpeechSynthesisUtterance | null>(null);
+  const [commandToastOpen, setCommandToastOpen] = useState(false);
+  const [commandMessage, setCommandMessage] = useState("");
+
+  // Mover la función speakFeedback al principio
+  function speakFeedback(text: string) {
+    speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'es-ES';
+    utt.rate = 0.9;
+    speechSynthesis.speak(utt);
+  }
 
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -382,4 +393,3 @@ const Index = () => {
 };
 
 export default Index;
-
