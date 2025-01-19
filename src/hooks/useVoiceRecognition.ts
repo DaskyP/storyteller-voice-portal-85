@@ -53,10 +53,15 @@ export function useVoiceRecognition({
       if (command === 'reproducir' || command === 'play') {
         onPlayPause()
       }
-      // "reproducir X"
-      else if (command.startsWith('reproducir ') || command.startsWith('play ')) {
-        const storyTitle = command.replace(/^reproducir\s+|^play\s+/, '').trim()
-        console.log('Buscando historia:', storyTitle) // Para debug
+      // "reproducir X" o "play X"
+      else if (command.startsWith('reproducir') || command.startsWith('play')) {
+        let storyTitle = command
+        if (command.startsWith('reproducir')) {
+          storyTitle = command.substring('reproducir'.length).trim()
+        } else if (command.startsWith('play')) {
+          storyTitle = command.substring('play'.length).trim()
+        }
+        console.log('Título extraído:', storyTitle) // Para debug
         onPlayStory(storyTitle)
       }
       else if (command.includes('pausa') || command.includes('pausar')) {
