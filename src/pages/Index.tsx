@@ -97,24 +97,23 @@ const Index = () => {
   };
 
   const listCurrentStories = () => {
-    const filteredStories = selectedCategory 
-      ? stories.filter(story => story.category === selectedCategory)
-      : stories;
+    const filtered = selectedCategory 
+      ? stories.filter(s => s.category === selectedCategory)
+      : []
     
-    if (filteredStories.length === 0) {
-      speakFeedback("No hay cuentos disponibles en esta sección");
-      return;
+    if (filtered.length === 0) {
+      speakFeedback(selectedCategory 
+        ? "No hay cuentos disponibles en esta sección" 
+        : "Por favor, selecciona una sección primero")
+      return
     }
 
-    let message = selectedCategory 
-      ? `En la sección ${getCategoryName(selectedCategory)}, los cuentos disponibles son: `
-      : "Los cuentos disponibles son: ";
-    
-    filteredStories.forEach((story, index) => {
-      message += `${story.title}${index < filteredStories.length - 1 ? ', ' : '.'}`;
-    });
+    let msg = `En la sección ${getCategoryName(selectedCategory!)}, los cuentos disponibles son: `
+    filtered.forEach((s, i) => {
+      msg += s.title + (i < filtered.length - 1 ? ', ' : '.')
+    })
 
-    speakFeedback(message);
+    speakFeedback(msg)
   };
 
   const getCategoryName = (category: StoryCategory): string => {
@@ -393,3 +392,4 @@ const Index = () => {
 };
 
 export default Index;
+
