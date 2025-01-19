@@ -2,7 +2,7 @@ import React from 'react';
 import StoryCard from './StoryCard';
 import { Story, StoryCategory } from '../types/Story';
 
-const stories: Story[] = [
+export const stories: Story[] = [
   {
     id: 1,
     title: "El Principito",

@@ -1,99 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import StoryList from '@/components/StoryList';
+import StoryList, { stories } from '@/components/StoryList';
 import AudioPlayer from '@/components/AudioPlayer';
 import { Button } from '@/components/ui/button';
 import { StoryCategory, Story } from '../types/Story';
 import { Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-// Definición de historias de ejemplo (esto debería venir de tu base de datos o API)
-const stories: Story[] = [
-  {
-    id: 1,
-    title: "El bosque mágico",
-    description: "Una aventura en un bosque encantado",
-    duration: "5 min",
-    category: "adventure",
-    content: "Había una vez en un bosque mágico..."
-  },
-  {
-    id: 2,
-    title: "La estrella dormilona",
-    description: "Un cuento para ir a dormir",
-    duration: "3 min",
-    category: "sleep",
-    content: "En lo alto del cielo había una estrella..."
-  },
-  // ... Agrega más historias según necesites
-];
+import { useNarration } from '@/hooks/useNarration';
+import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 
 const Index = () => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentStory, setCurrentStory] = useState<Story | null>(null);
+  const {
+    isPlaying,
+    storyFinished,
+    currentStory,
+    handlePlayStory,
+    handlePlayPause,
+    handlePause,
+    cancelNarration,
+    chunkIndex,
+    setNarrationVolume,
+    volume,
+    isPaused
+  } = useNarration();
+
   const [selectedCategory, setSelectedCategory] = useState<StoryCategory | undefined>();
-  const [volume, setVolume] = useState(1);
   const [voiceControlActive, setVoiceControlActive] = useState(false);
   const { toast } = useToast();
-  const [speechUtterance, setSpeechUtterance] = useState<SpeechSynthesisUtterance | null>(null);
-  const [commandToastOpen, setCommandToastOpen] = useState(false);
-  const [commandMessage, setCommandMessage] = useState("");
 
-  // Mover la función speakFeedback al principio
-  function speakFeedback(text: string) {
+  const speakFeedback = (text: string) => {
     speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = 'es-ES';
     utt.rate = 0.9;
     speechSynthesis.speak(utt);
-  }
-
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.ctrlKey) {
-        event.preventDefault();
-        startVoiceControl();
-      } else if (event.key.toLowerCase() === 'z') {
-        event.preventDefault();
-        speakCommands();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, []);
-
-  const speakCommands = () => {
-    if (!window.speechSynthesis) {
-      toast({
-        title: "Error",
-        description: "Tu navegador no soporta la síntesis de voz.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-
-    const commands = `
-      Comandos disponibles:
-      Z: Escuchar lista de comandos
-      Control: Activar control por voz
-      Comandos de voz:
-      "reproducir" o "play": Reproducir o pausar cuento actual
-      "siguiente" o "next": Siguiente cuento
-      "anterior" o "previous": Cuento anterior
-      "dormir": Ir a sección para dormir
-      "diversión": Ir a sección de diversión
-      "educativo": Ir a sección educativa
-      "aventuras": Ir a sección de aventuras
-      "listar": Escuchar lista de cuentos en la sección actual
-      "reproducir" seguido del título del cuento: Para reproducir un cuento específico
-    `;
-
-    const utterance = new SpeechSynthesisUtterance(commands);
-    utterance.lang = 'es-ES';
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
   };
 
   const listCurrentStories = () => {
@@ -124,90 +63,6 @@ const Index = () => {
       adventure: 'aventuras'
     };
     return categoryMap[category];
-  };
-
-  const splitTextIntoChunks = (text: string): string[] => {
-    const maxLength = 150; // Reducido para evitar cortes
-    const chunks: string[] = [];
-    
-    // Dividir por oraciones usando puntuación
-    const sentences = text.split(/([.!?]+)\s+/);
-    let currentChunk = '';
-    
-    for (let i = 0; i < sentences.length; i++) {
-      const sentence = sentences[i].trim();
-      
-      if (!sentence) continue;
-      
-      if ((currentChunk + sentence).length <= maxLength) {
-        currentChunk += (currentChunk ? ' ' : '') + sentence;
-      } else {
-        if (currentChunk) chunks.push(currentChunk);
-        currentChunk = sentence;
-      }
-    }
-    
-    if (currentChunk) chunks.push(currentChunk);
-    return chunks;
-  };
-
-  const speakTextInChunks = async (text: string, volume: number) => {
-    try {
-      const chunks = splitTextIntoChunks(text);
-      
-      for (let i = 0; i < chunks.length; i++) {
-        await new Promise<void>((resolve, reject) => {
-          const utterance = new SpeechSynthesisUtterance(chunks[i]);
-          utterance.volume = volume;
-          utterance.lang = 'es-ES';
-          utterance.rate = 0.9;
-          
-          utterance.onend = () => resolve();
-          utterance.onerror = () => reject();
-          
-          window.speechSynthesis.speak(utterance);
-        });
-      }
-    } catch (error) {
-      console.error('Error al reproducir el texto:', error);
-      toast({
-        title: "Error",
-        description: "Hubo un error al reproducir el cuento.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsPlaying(false);
-    }
-  };
-
-  const handlePlayStory = async (story: Story) => {
-    if (!window.speechSynthesis) {
-      toast({
-        title: "Error",
-        description: "Tu navegador no soporta la síntesis de voz.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setCurrentStory(story);
-    window.speechSynthesis.cancel();
-    setIsPlaying(true);
-    
-    await speakTextInChunks(story.content, volume);
-  };
-
-  const handlePlayPause = () => {
-    if (!window.speechSynthesis) return;
-    
-    if (isPlaying) {
-      window.speechSynthesis.pause();
-      speakFeedback("Comando recibido: pausar narración");
-    } else {
-      window.speechSynthesis.resume();
-      speakFeedback("Comando recibido: reanudar narración");
-    }
-    setIsPlaying(!isPlaying);
   };
 
   const handleNext = () => {
@@ -242,10 +97,7 @@ const Index = () => {
 
   const handleVolumeChange = (newVolume: number[]) => {
     const volumeValue = newVolume[0] / 100;
-    setVolume(volumeValue);
-    if (speechUtterance) {
-      speechUtterance.volume = volumeValue;
-    }
+    setNarrationVolume(volumeValue);
   };
 
   const startVoiceControl = async () => {
@@ -392,4 +244,3 @@ const Index = () => {
 };
 
 export default Index;
-

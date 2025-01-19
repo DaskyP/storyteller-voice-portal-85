@@ -88,13 +88,14 @@ export function useNarration() {
     if (isPlaying && !storyFinished) {
       speechSynthesis.pause();
       setIsPlaying(false);
+      setIsPaused(true);
     } else if (!isPlaying && !storyFinished) {
       if (isPaused) {
         speechSynthesis.resume();
         setIsPlaying(true);
         setIsPaused(false);
       } else {
-        startReadingStory(0);
+        startReadingStory(chunkIndex);
       }
     } else if (storyFinished && currentStory) {
       speechSynthesis.cancel();
