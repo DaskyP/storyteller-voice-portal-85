@@ -26,7 +26,7 @@ export default {
         foreground: "hsl(var(--foreground))",
         story: {
           background: "#F8FAFC",
-          border: "#E2E8F0",
+          border: "#333333",
           hover: "#F1F5F9"
         },
         primary: {

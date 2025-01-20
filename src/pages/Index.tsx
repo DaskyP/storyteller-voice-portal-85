@@ -5,28 +5,7 @@ import { Button } from '@/components/ui/button';
 import { StoryCategory, Story } from '../types/Story';
 import { Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-// Definición de historias de ejemplo (esto debería venir de tu base de datos o API)
-const stories: Story[] = [
-  {
-    id: 1,
-    title: "El bosque mágico",
-    description: "Una aventura en un bosque encantado",
-    duration: "5 min",
-    category: "adventure",
-    content: "Había una vez en un bosque mágico..."
-  },
-  {
-    id: 2,
-    title: "La estrella dormilona",
-    description: "Un cuento para ir a dormir",
-    duration: "3 min",
-    category: "sleep",
-    content: "En lo alto del cielo había una estrella..."
-  },
-  // ... Agrega más historias según necesites
-];
-
+import { stories } from '@/components/StoryList';
 const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStory, setCurrentStory] = useState<Story | null>(null);
@@ -35,8 +14,7 @@ const Index = () => {
   const [voiceControlActive, setVoiceControlActive] = useState(false);
   const { toast } = useToast();
   const [speechUtterance, setSpeechUtterance] = useState<SpeechSynthesisUtterance | null>(null);
-  const [commandToastOpen, setCommandToastOpen] = useState(false);
-  const [commandMessage, setCommandMessage] = useState("");
+
 
   // Mover la función speakFeedback al principio
   function speakFeedback(text: string) {
@@ -73,21 +51,17 @@ const Index = () => {
     }
 
     window.speechSynthesis.cancel();
-
+ 
     const commands = `
       Comandos disponibles:
       Z: Escuchar lista de comandos
       Control: Activar control por voz
       Comandos de voz:
-      "reproducir" o "play": Reproducir o pausar cuento actual
-      "siguiente" o "next": Siguiente cuento
-      "anterior" o "previous": Cuento anterior
       "dormir": Ir a sección para dormir
       "diversión": Ir a sección de diversión
       "educativo": Ir a sección educativa
       "aventuras": Ir a sección de aventuras
-      "listar": Escuchar lista de cuentos en la sección actual
-      "reproducir" seguido del título del cuento: Para reproducir un cuento específico
+      "reproducir" seguido del título del cuento: Para reproducir un cuento específico de la sección
     `;
 
     const utterance = new SpeechSynthesisUtterance(commands);
@@ -173,7 +147,7 @@ const Index = () => {
       toast({
         title: "Error",
         description: "Hubo un error al reproducir el cuento.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsPlaying(false);
@@ -197,56 +171,6 @@ const Index = () => {
     await speakTextInChunks(story.content, volume);
   };
 
-  const handlePlayPause = () => {
-    if (!window.speechSynthesis) return;
-    
-    if (isPlaying) {
-      window.speechSynthesis.pause();
-      speakFeedback("Comando recibido: pausar narración");
-    } else {
-      window.speechSynthesis.resume();
-      speakFeedback("Comando recibido: reanudar narración");
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleNext = () => {
-    if (!currentStory) return;
-    
-    const stories = document.querySelectorAll('[role="article"]');
-    const currentIndex = Array.from(stories).findIndex(
-      story => story.getAttribute('aria-label')?.includes(currentStory.title)
-    );
-    
-    if (currentIndex < stories.length - 1) {
-      speakFeedback("Comando recibido: siguiente cuento");
-      const nextStory = stories[currentIndex + 1];
-      nextStory.querySelector('button')?.click();
-    }
-  };
-
-  const handlePrevious = () => {
-    if (!currentStory) return;
-    
-    const stories = document.querySelectorAll('[role="article"]');
-    const currentIndex = Array.from(stories).findIndex(
-      story => story.getAttribute('aria-label')?.includes(currentStory.title)
-    );
-    
-    if (currentIndex > 0) {
-      speakFeedback("Comando recibido: cuento anterior");
-      const previousStory = stories[currentIndex - 1];
-      previousStory.querySelector('button')?.click();
-    }
-  };
-
-  const handleVolumeChange = (newVolume: number[]) => {
-    const volumeValue = newVolume[0] / 100;
-    setVolume(volumeValue);
-    if (speechUtterance) {
-      speechUtterance.volume = volumeValue;
-    }
-  };
 
   const startVoiceControl = async () => {
     try {
@@ -269,7 +193,6 @@ const Index = () => {
         
         if (command.includes('reproducir') || command.includes('play')) {
           if (command === 'reproducir' || command === 'play') {
-            handlePlayPause();
           } else {
             const storyTitle = command.replace('reproducir', '').trim();
             const filteredStories = selectedCategory 
@@ -287,10 +210,6 @@ const Index = () => {
               speakFeedback("No se encontró el cuento especificado");
             }
           }
-        } else if (command.includes('siguiente') || command.includes('next')) {
-          handleNext();
-        } else if (command.includes('anterior') || command.includes('previous')) {
-          handlePrevious();
         } else if (command.includes('dormir')) {
           setSelectedCategory('sleep');
           speakFeedback("Cambiando a sección dormir");
@@ -303,9 +222,7 @@ const Index = () => {
         } else if (command.includes('aventuras')) {
           setSelectedCategory('adventure');
           speakFeedback("Cambiando a sección aventuras");
-        } else if (command.includes('listar')) {
-          listCurrentStories();
-        }
+        } 
       };
 
       recognition.start();
@@ -326,7 +243,12 @@ const Index = () => {
       });
     }
   };
-
+  useEffect(() => {
+    if (selectedCategory) {
+      listCurrentStories();
+    }
+  }, [selectedCategory]);
+  
   const categories: { id: StoryCategory; name: string }[] = [
     { id: 'sleep', name: 'Para Dormir' },
     { id: 'fun', name: 'Diversión' },
@@ -335,13 +257,13 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#111827]">
       <main className="container py-8">
         <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4" tabIndex={0}>
+          <h1 className="text-4xl text-[#22C55E] font-bold mb-4" tabIndex={0}>
             Cuentacuentos Accesible
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8" tabIndex={0}>
+          <p className="text-xl text-gray-100 max-w-2xl mx-auto mb-8" tabIndex={0}>
             Presiona <strong>Control</strong> para activar el control por voz, o <strong>Z</strong> para escuchar los comandos disponibles.
           </p>
           <Button
@@ -380,10 +302,6 @@ const Index = () => {
           <AudioPlayer
             title={currentStory.title}
             isPlaying={isPlaying}
-            onPlayPause={handlePlayPause}
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            onVolumeChange={handleVolumeChange}
           />
         )}
       </main>
