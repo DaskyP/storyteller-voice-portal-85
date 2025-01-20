@@ -32,7 +32,9 @@ export function useVoiceRecognition({
   }
 
   function startVoiceControl() {
-    if (voiceControlActive) return // si ya está activo, no reiniciar
+    if (voiceControlActive) {
+      stopRecognition()
+    }
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
@@ -47,13 +49,11 @@ export function useVoiceRecognition({
 
     recognition.onresult = (evt: SpeechRecognitionEvent) => {
       const command = evt.results[evt.results.length - 1][0].transcript.toLowerCase().trim()
-      console.log('Comando recibido:', command) // Para debug
+      console.log('Comando recibido:', command)
 
-      // "reproducir" / "play" sin título => toggle
       if (command === 'reproducir' || command === 'play') {
         onPlayPause()
       }
-      // "reproducir X" o "play X"
       else if (command.startsWith('reproducir') || command.startsWith('play')) {
         let storyTitle = command
         if (command.startsWith('reproducir')) {
@@ -61,7 +61,7 @@ export function useVoiceRecognition({
         } else if (command.startsWith('play')) {
           storyTitle = command.substring('play'.length).trim()
         }
-        console.log('Título extraído:', storyTitle) // Para debug
+        console.log('Título extraído:', storyTitle)
         onPlayStory(storyTitle)
       }
       else if (command.includes('pausa') || command.includes('pausar')) {

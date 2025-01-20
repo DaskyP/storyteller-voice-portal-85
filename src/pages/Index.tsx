@@ -2,11 +2,19 @@ import React, { useState, useEffect } from 'react';
 import StoryList, { stories } from '@/components/StoryList';
 import AudioPlayer from '@/components/AudioPlayer';
 import { Button } from '@/components/ui/button';
-import { StoryCategory, Story } from '../types/Story';
+import { StoryCategory } from '../types/Story';
 import { Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNarration } from '@/hooks/useNarration';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
+import {
+  ToastProvider,
+  ToastViewport,
+  Toast,
+  ToastTitle,
+  ToastDescription,
+  ToastClose,
+} from '@/components/ui/toast';
 
 const Index = () => {
   const {
@@ -17,15 +25,18 @@ const Index = () => {
     handlePlayPause,
     handlePause,
     cancelNarration,
-    chunkIndex,
     setNarrationVolume,
-    volume,
     isPaused
   } = useNarration();
 
   const [selectedCategory, setSelectedCategory] = useState<StoryCategory | undefined>();
-  const [voiceControlActive, setVoiceControlActive] = useState(false);
-  const { toast } = useToast();
+  const [commandToastOpen, setCommandToastOpen] = useState(false);
+  const [commandMessage, setCommandMessage] = useState("");
+
+  const showCommandToast = (msg: string) => {
+    setCommandMessage(msg);
+    setCommandToastOpen(true);
+  };
 
   const speakFeedback = (text: string) => {
     speechSynthesis.cancel();
@@ -36,36 +47,89 @@ const Index = () => {
   };
 
   const listCurrentStories = () => {
-    const filtered = selectedCategory 
-      ? stories.filter(s => s.category === selectedCategory)
-      : []
-    
-    if (filtered.length === 0) {
-      speakFeedback(selectedCategory 
-        ? "No hay cuentos disponibles en esta sección" 
-        : "Por favor, selecciona una sección primero")
-      return
+    if (!selectedCategory) {
+      speakFeedback("Por favor, selecciona primero una sección");
+      return;
     }
 
-    let msg = `En la sección ${getCategoryName(selectedCategory!)}, los cuentos disponibles son: `
-    filtered.forEach((s, i) => {
-      msg += s.title + (i < filtered.length - 1 ? ', ' : '.')
-    })
+    const filtered = stories.filter(s => s.category === selectedCategory);
+    
+    if (filtered.length === 0) {
+      speakFeedback("No hay cuentos disponibles en esta sección");
+      return;
+    }
 
-    speakFeedback(msg)
+    const msg = `En la sección ${mapCategory(selectedCategory)}, los cuentos disponibles son: ${
+      filtered.map(s => s.title).join(', ')
+    }`;
+    
+    speakFeedback(msg);
   };
 
-  const getCategoryName = (category: StoryCategory): string => {
-    const categoryMap = {
-      sleep: 'dormir',
-      fun: 'diversión',
-      educational: 'educativo',
-      adventure: 'aventuras'
+  const {
+    voiceControlActive,
+    startVoiceControl,
+    stopRecognition
+  } = useVoiceRecognition({
+    onPlayPause: () => {
+      showCommandToast("Comando: reproducir/pausar");
+      handlePlayPause();
+    },
+    onPlayStory: (title) => {
+      showCommandToast(`Comando: reproducir «${title}»`);
+      const filtered = selectedCategory
+        ? stories.filter(s => s.category === selectedCategory)
+        : stories;
+      const found = filtered.find(st => 
+        st.title.toLowerCase().includes(title.toLowerCase())
+      );
+      if (found) {
+        cancelNarration();
+        handlePlayStory(found);
+      } else {
+        speakFeedback("No se encontró esa historia.");
+      }
+    },
+    onListStories: () => {
+      showCommandToast("Comando: listar");
+      listCurrentStories();
+    },
+    onSetCategory: (cat) => {
+      showCommandToast(`Comando: sección => ${cat}`);
+      setSelectedCategory(cat);
+      cancelNarration();
+      speakFeedback(`Cambiando a la sección ${mapCategory(cat)}`);
+    },
+    onNext: handleNext,
+    onPrevious: handlePrevious,
+    onPause: () => {
+      showCommandToast("Comando: pausa");
+      handlePause();
+    }
+  });
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        if (!voiceControlActive) {
+          startVoiceControl();
+          showCommandToast("Control → Activar voz");
+        }
+      }
+      else if (e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        stopRecognition();
+        speakCommands();
+        showCommandToast("Z → Mostrar comandos");
+      }
     };
-    return categoryMap[category];
-  };
 
-  const handleNext = () => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [voiceControlActive, startVoiceControl, stopRecognition]);
+
+  function handleNext() {
     if (!currentStory) return;
     
     const stories = document.querySelectorAll('[role="article"]');
@@ -74,13 +138,13 @@ const Index = () => {
     );
     
     if (currentIndex < stories.length - 1) {
-      speakFeedback("Comando recibido: siguiente cuento");
+      speakFeedback("Siguiente cuento");
       const nextStory = stories[currentIndex + 1];
       nextStory.querySelector('button')?.click();
     }
-  };
+  }
 
-  const handlePrevious = () => {
+  function handlePrevious() {
     if (!currentStory) return;
     
     const stories = document.querySelectorAll('[role="article"]');
@@ -89,95 +153,35 @@ const Index = () => {
     );
     
     if (currentIndex > 0) {
-      speakFeedback("Comando recibido: cuento anterior");
+      speakFeedback("Cuento anterior");
       const previousStory = stories[currentIndex - 1];
       previousStory.querySelector('button')?.click();
     }
-  };
+  }
 
-  const handleVolumeChange = (newVolume: number[]) => {
-    const volumeValue = newVolume[0] / 100;
-    setNarrationVolume(volumeValue);
-  };
+  function mapCategory(cat: StoryCategory): string {
+    const categoryMap = {
+      sleep: 'dormir',
+      fun: 'diversión',
+      educational: 'educativo',
+      adventure: 'aventuras'
+    };
+    return categoryMap[cat];
+  }
 
-  const startVoiceControl = async () => {
-    try {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        toast({
-          title: "Error",
-          description: "Tu navegador no soporta el reconocimiento de voz.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'es-ES';
-      recognition.continuous = true;
-      
-      recognition.onresult = (event) => {
-        const command = event.results[event.results.length - 1][0].transcript.toLowerCase();
-        
-        if (command.includes('reproducir') || command.includes('play')) {
-          if (command === 'reproducir' || command === 'play') {
-            handlePlayPause();
-          } else {
-            const storyTitle = command.replace('reproducir', '').trim();
-            const filteredStories = selectedCategory 
-              ? stories.filter(story => story.category === selectedCategory)
-              : stories;
-            
-            const foundStory = filteredStories.find(story => 
-              story.title.toLowerCase().includes(storyTitle)
-            );
-            
-            if (foundStory) {
-              speakFeedback(`Reproduciendo ${foundStory.title}`);
-              handlePlayStory(foundStory);
-            } else {
-              speakFeedback("No se encontró el cuento especificado");
-            }
-          }
-        } else if (command.includes('siguiente') || command.includes('next')) {
-          handleNext();
-        } else if (command.includes('anterior') || command.includes('previous')) {
-          handlePrevious();
-        } else if (command.includes('dormir')) {
-          setSelectedCategory('sleep');
-          speakFeedback("Cambiando a sección dormir");
-        } else if (command.includes('diversión')) {
-          setSelectedCategory('fun');
-          speakFeedback("Cambiando a sección diversión");
-        } else if (command.includes('educativo')) {
-          setSelectedCategory('educational');
-          speakFeedback("Cambiando a sección educativa");
-        } else if (command.includes('aventuras')) {
-          setSelectedCategory('adventure');
-          speakFeedback("Cambiando a sección aventuras");
-        } else if (command.includes('listar')) {
-          listCurrentStories();
-        }
-      };
-
-      recognition.start();
-      setVoiceControlActive(true);
-      
-      toast({
-        title: "Control por voz activado",
-        description: "Ahora puede usar los comandos de voz. Presione Z para escuchar los comandos disponibles.",
-      });
-      
-      speakFeedback("Control por voz activado. Presiona Z para escuchar los comandos disponibles.");
-    } catch (error) {
-      console.error("Error al iniciar el control por voz:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo activar el control por voz. Por favor, verifique los permisos del micrófono.",
-        variant: "destructive"
-      });
-    }
-  };
+  function speakCommands() {
+    speakFeedback(`
+      Comandos de voz disponibles:
+      - "reproducir" para pausar o reanudar
+      - "reproducir" seguido del título para una historia específica
+      - "pausa" para pausar
+      - "siguiente" para el siguiente cuento
+      - "anterior" para el cuento anterior
+      - "dormir", "diversión", "educativo", "aventuras" para cambiar de sección
+      - "listar" para escuchar los cuentos disponibles
+      Presiona Control para activar la voz, Z para ver los comandos
+    `);
+  }
 
   const categories: { id: StoryCategory; name: string }[] = [
     { id: 'sleep', name: 'Para Dormir' },
