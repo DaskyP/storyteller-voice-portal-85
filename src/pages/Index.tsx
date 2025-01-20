@@ -7,16 +7,9 @@ import { Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNarration } from '@/hooks/useNarration';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
-import {
-  ToastProvider,
-  ToastViewport,
-  Toast,
-  ToastTitle,
-  ToastDescription,
-  ToastClose,
-} from '@/components/ui/toast';
 
 const Index = () => {
+  const { toast } = useToast();
   const {
     isPlaying,
     storyFinished,
@@ -30,32 +23,39 @@ const Index = () => {
   } = useNarration();
 
   const [selectedCategory, setSelectedCategory] = useState<StoryCategory | undefined>();
-  const [commandToastOpen, setCommandToastOpen] = useState(false);
-  const [commandMessage, setCommandMessage] = useState("");
-
-  const showCommandToast = (msg: string) => {
-    setCommandMessage(msg);
-    setCommandToastOpen(true);
-  };
 
   const speakFeedback = (text: string) => {
-    speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = 'es-ES';
-    utt.rate = 0.9;
-    speechSynthesis.speak(utt);
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-ES';
+    utterance.rate = 0.9;
+    utterance.onend = () => {
+      if (isPaused) {
+        speechSynthesis.pause();
+      } else if (isPlaying) {
+        handlePlayPause();
+      }
+    };
+    speechSynthesis.speak(utterance);
+  };
+
+  const showFeedback = (message: string) => {
+    toast({
+      title: "Comando de voz",
+      description: message,
+    });
+    speakFeedback(message);
   };
 
   const listCurrentStories = () => {
     if (!selectedCategory) {
-      speakFeedback("Por favor, selecciona primero una sección");
+      showFeedback("Por favor, selecciona primero una sección");
       return;
     }
 
     const filtered = stories.filter(s => s.category === selectedCategory);
     
     if (filtered.length === 0) {
-      speakFeedback("No hay cuentos disponibles en esta sección");
+      showFeedback("No hay cuentos disponibles en esta sección");
       return;
     }
 
@@ -63,7 +63,11 @@ const Index = () => {
       filtered.map(s => s.title).join(', ')
     }`;
     
-    speakFeedback(msg);
+    showFeedback(msg);
+  };
+
+  const handleVolumeChange = (value: number[]) => {
+    setNarrationVolume(value[0] / 100);
   };
 
   const {
@@ -72,11 +76,10 @@ const Index = () => {
     stopRecognition
   } = useVoiceRecognition({
     onPlayPause: () => {
-      showCommandToast("Comando: reproducir/pausar");
+      showFeedback(isPlaying ? "Pausando cuento" : "Reanudando cuento");
       handlePlayPause();
     },
     onPlayStory: (title) => {
-      showCommandToast(`Comando: reproducir «${title}»`);
       const filtered = selectedCategory
         ? stories.filter(s => s.category === selectedCategory)
         : stories;
@@ -84,26 +87,34 @@ const Index = () => {
         st.title.toLowerCase().includes(title.toLowerCase())
       );
       if (found) {
+        showFeedback(`Reproduciendo: ${found.title}`);
         cancelNarration();
         handlePlayStory(found);
       } else {
-        speakFeedback("No se encontró esa historia.");
+        showFeedback("No se encontró esa historia en la sección actual");
       }
     },
     onListStories: () => {
-      showCommandToast("Comando: listar");
+      showFeedback("Listando cuentos disponibles");
       listCurrentStories();
     },
     onSetCategory: (cat) => {
-      showCommandToast(`Comando: sección => ${cat}`);
+      showFeedback(`Cambiando a la sección ${mapCategory(cat)}`);
       setSelectedCategory(cat);
-      cancelNarration();
-      speakFeedback(`Cambiando a la sección ${mapCategory(cat)}`);
+      if (currentStory) {
+        cancelNarration();
+      }
     },
-    onNext: handleNext,
-    onPrevious: handlePrevious,
+    onNext: () => {
+      showFeedback("Siguiente cuento");
+      handleNext();
+    },
+    onPrevious: () => {
+      showFeedback("Cuento anterior");
+      handlePrevious();
+    },
     onPause: () => {
-      showCommandToast("Comando: pausa");
+      showFeedback("Pausando cuento");
       handlePause();
     }
   });
@@ -114,14 +125,23 @@ const Index = () => {
         e.preventDefault();
         if (!voiceControlActive) {
           startVoiceControl();
-          showCommandToast("Control → Activar voz");
+          showFeedback("Control por voz activado");
         }
       }
       else if (e.key.toLowerCase() === 'z') {
         e.preventDefault();
         stopRecognition();
-        speakCommands();
-        showCommandToast("Z → Mostrar comandos");
+        showFeedback(`
+          Comandos disponibles:
+          "reproducir" para pausar o reanudar,
+          "reproducir" seguido del título para una historia específica,
+          "pausa" para pausar,
+          "siguiente" para el siguiente cuento,
+          "anterior" para el cuento anterior,
+          "dormir", "diversión", "educativo", "aventuras" para cambiar de sección,
+          "listar" para escuchar los cuentos disponibles.
+          Presiona Control para activar la voz, Z para ver los comandos
+        `);
       }
     };
 
@@ -138,7 +158,6 @@ const Index = () => {
     );
     
     if (currentIndex < stories.length - 1) {
-      speakFeedback("Siguiente cuento");
       const nextStory = stories[currentIndex + 1];
       nextStory.querySelector('button')?.click();
     }
@@ -153,7 +172,6 @@ const Index = () => {
     );
     
     if (currentIndex > 0) {
-      speakFeedback("Cuento anterior");
       const previousStory = stories[currentIndex - 1];
       previousStory.querySelector('button')?.click();
     }
@@ -167,20 +185,6 @@ const Index = () => {
       adventure: 'aventuras'
     };
     return categoryMap[cat];
-  }
-
-  function speakCommands() {
-    speakFeedback(`
-      Comandos de voz disponibles:
-      - "reproducir" para pausar o reanudar
-      - "reproducir" seguido del título para una historia específica
-      - "pausa" para pausar
-      - "siguiente" para el siguiente cuento
-      - "anterior" para el cuento anterior
-      - "dormir", "diversión", "educativo", "aventuras" para cambiar de sección
-      - "listar" para escuchar los cuentos disponibles
-      Presiona Control para activar la voz, Z para ver los comandos
-    `);
   }
 
   const categories: { id: StoryCategory; name: string }[] = [
