@@ -22,13 +22,13 @@ const AudioPlayer = ({
 }: AudioPlayerProps) => {
   return (
     <div 
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg"
+      className="fixed bottom-0 left-0 right-0 bg-story-background border-t border-story-border p-4 shadow-lg"
       role="region"
       aria-label="Reproductor de audio"
     >
       <div className="container mx-auto">
         <div className="flex items-center justify-between gap-4">
-          <h3 className="text-xl font-semibold truncate flex-1" tabIndex={0}>
+          <h3 className="text-xl font-semibold truncate flex-1 text-white" tabIndex={0}>
             {title}
           </h3>
           
@@ -38,12 +38,13 @@ const AudioPlayer = ({
               size="icon"
               onClick={onPrevious}
               aria-label="Cuento anterior"
+              className="text-gray-300 hover:text-white"
             >
               <SkipBack className="w-6 h-6" />
             </Button>
 
             <Button
-              className="w-12 h-12 rounded-full bg-green-600 hover:bg-green-700"
+              className="w-12 h-12 rounded-full bg-primary hover:bg-primary-hover"
               onClick={onPlayPause}
               aria-label={isPlaying ? "Pausar" : "Reproducir"}
             >
@@ -59,6 +60,7 @@ const AudioPlayer = ({
               size="icon"
               onClick={onNext}
               aria-label="Siguiente cuento"
+              className="text-gray-300 hover:text-white"
             >
               <SkipForward className="w-6 h-6" />
             </Button>
@@ -70,6 +72,7 @@ const AudioPlayer = ({
                 step={1}
                 onValueChange={onVolumeChange}
                 aria-label="Control de volumen"
+                className="cursor-pointer"
               />
             </div>
           </div>

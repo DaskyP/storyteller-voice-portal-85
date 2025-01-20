@@ -25,17 +25,17 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         story: {
-          background: "#F8FAFC",
-          border: "#E2E8F0",
-          hover: "#F1F5F9"
+          background: "#1a1a1a",
+          border: "#333333",
+          hover: "#262626"
         },
         primary: {
-          DEFAULT: "#1E40AF",
+          DEFAULT: "#22c55e",
           foreground: "#FFFFFF",
-          hover: "#1E3A8A"
+          hover: "#16a34a"
         },
         secondary: {
-          DEFAULT: "#475569",
+          DEFAULT: "#4b5563",
           foreground: "#FFFFFF"
         }
       },
@@ -46,11 +46,6 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],
-      },
-      fontSize: {
-        "2xl": "1.75rem",
-        "3xl": "2rem",
-        "4xl": "2.5rem",
       },
     },
   },

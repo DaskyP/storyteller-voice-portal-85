@@ -12,29 +12,22 @@ const Index = () => {
   const { toast } = useToast();
   const {
     isPlaying,
-    storyFinished,
     currentStory,
     handlePlayStory,
     handlePlayPause,
     handlePause,
     cancelNarration,
     setNarrationVolume,
-    isPaused
   } = useNarration();
 
   const [selectedCategory, setSelectedCategory] = useState<StoryCategory | undefined>();
+  const [lastCommand, setLastCommand] = useState<string>("");
 
   const speakFeedback = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-ES';
     utterance.rate = 0.9;
-    utterance.onend = () => {
-      if (isPaused) {
-        speechSynthesis.pause();
-      } else if (isPlaying) {
-        handlePlayPause();
-      }
-    };
+    speechSynthesis.cancel(); // Cancelar cualquier síntesis previa
     speechSynthesis.speak(utterance);
   };
 
@@ -77,10 +70,16 @@ const Index = () => {
     stopRecognition
   } = useVoiceRecognition({
     onPlayPause: () => {
-      showFeedback(isPlaying ? "Pausando cuento" : "Reanudando cuento");
-      handlePlayPause();
+      setLastCommand("play_pause");
+      if (currentStory) {
+        showFeedback(isPlaying ? "Pausando cuento" : "Reanudando cuento");
+        handlePlayPause();
+      } else {
+        showFeedback("No hay ningún cuento seleccionado");
+      }
     },
     onPlayStory: (title) => {
+      setLastCommand("play_story");
       const currentStories = selectedCategory
         ? stories.filter(s => s.category === selectedCategory)
         : stories;
@@ -94,16 +93,17 @@ const Index = () => {
         if (currentStory) {
           cancelNarration();
         }
-        handlePlayStory(found);
+        setTimeout(() => handlePlayStory(found), 1000);
       } else {
         showFeedback("No se encontró esa historia en la sección actual");
       }
     },
     onListStories: () => {
-      showFeedback("Listando cuentos disponibles");
+      setLastCommand("list");
       listCurrentStories();
     },
     onSetCategory: (cat) => {
+      setLastCommand("set_category");
       showFeedback(`Cambiando a la sección ${mapCategory(cat)}`);
       setSelectedCategory(cat);
       if (currentStory) {
@@ -111,16 +111,23 @@ const Index = () => {
       }
     },
     onNext: () => {
+      setLastCommand("next");
       showFeedback("Siguiente cuento");
       handleNext();
     },
     onPrevious: () => {
+      setLastCommand("previous");
       showFeedback("Cuento anterior");
       handlePrevious();
     },
     onPause: () => {
-      showFeedback("Pausando cuento");
-      handlePause();
+      setLastCommand("pause");
+      if (currentStory && isPlaying) {
+        showFeedback("Pausando cuento");
+        handlePause();
+      } else {
+        showFeedback("No hay ningún cuento reproduciéndose");
+      }
     }
   });
 
@@ -130,7 +137,17 @@ const Index = () => {
         e.preventDefault();
         if (!voiceControlActive) {
           startVoiceControl();
-          showFeedback("Control por voz activado. Di un comando.");
+          showFeedback(`
+            Control por voz activado. Di un comando.
+            Comandos disponibles:
+            "reproducir" para pausar o reanudar,
+            "reproducir" seguido del título para una historia específica,
+            "pausa" para pausar,
+            "siguiente" para el siguiente cuento,
+            "anterior" para el cuento anterior,
+            "dormir", "diversión", "educativo", "aventuras" para cambiar de sección,
+            "listar" para escuchar los cuentos disponibles
+          `);
         }
       }
       else if (e.key.toLowerCase() === 'z') {
@@ -200,19 +217,19 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-story-background text-white">
       <main className="container py-8">
         <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4" tabIndex={0}>
+          <h1 className="text-4xl font-bold mb-4 text-primary" tabIndex={0}>
             Cuentacuentos Accesible
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8" tabIndex={0}>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8" tabIndex={0}>
             Presiona <strong>Control</strong> para activar el control por voz, o <strong>Z</strong> para escuchar los comandos disponibles.
           </p>
           <Button
             onClick={startVoiceControl}
-            className={`bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto ${
-              voiceControlActive ? 'ring-2 ring-green-400' : ''
+            className={`bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto ${
+              voiceControlActive ? 'ring-2 ring-primary' : ''
             }`}
           >
             <Mic className="w-5 h-5" />
@@ -230,8 +247,8 @@ const Index = () => {
                   cancelNarration();
                 }
               }}
-              className={`bg-green-600 hover:bg-green-700 text-white ${
-                selectedCategory === category.id ? 'ring-2 ring-green-400' : ''
+              className={`bg-primary hover:bg-primary-hover text-white ${
+                selectedCategory === category.id ? 'ring-2 ring-primary' : ''
               }`}
             >
               {category.name}
