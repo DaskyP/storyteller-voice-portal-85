@@ -47,20 +47,21 @@ const Index = () => {
   };
 
   const listCurrentStories = () => {
-    if (!selectedCategory) {
-      showFeedback("Por favor, selecciona primero una sección");
-      return;
-    }
-
-    const filtered = stories.filter(s => s.category === selectedCategory);
+    const currentStories = selectedCategory 
+      ? stories.filter(s => s.category === selectedCategory)
+      : stories;
     
-    if (filtered.length === 0) {
+    if (currentStories.length === 0) {
       showFeedback("No hay cuentos disponibles en esta sección");
       return;
     }
 
-    const msg = `En la sección ${mapCategory(selectedCategory)}, los cuentos disponibles son: ${
-      filtered.map(s => s.title).join(', ')
+    const sectionName = selectedCategory 
+      ? mapCategory(selectedCategory)
+      : "todas las secciones";
+    
+    const msg = `En ${sectionName}, los cuentos disponibles son: ${
+      currentStories.map(s => s.title).join(', ')
     }`;
     
     showFeedback(msg);
@@ -80,15 +81,19 @@ const Index = () => {
       handlePlayPause();
     },
     onPlayStory: (title) => {
-      const filtered = selectedCategory
+      const currentStories = selectedCategory
         ? stories.filter(s => s.category === selectedCategory)
         : stories;
-      const found = filtered.find(st => 
+
+      const found = currentStories.find(st => 
         st.title.toLowerCase().includes(title.toLowerCase())
       );
+
       if (found) {
         showFeedback(`Reproduciendo: ${found.title}`);
-        cancelNarration();
+        if (currentStory) {
+          cancelNarration();
+        }
         handlePlayStory(found);
       } else {
         showFeedback("No se encontró esa historia en la sección actual");
@@ -125,7 +130,7 @@ const Index = () => {
         e.preventDefault();
         if (!voiceControlActive) {
           startVoiceControl();
-          showFeedback("Control por voz activado");
+          showFeedback("Control por voz activado. Di un comando.");
         }
       }
       else if (e.key.toLowerCase() === 'z') {
@@ -147,7 +152,7 @@ const Index = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [voiceControlActive, startVoiceControl, stopRecognition]);
+  }, [voiceControlActive, startVoiceControl, stopRecognition, showFeedback]);
 
   function handleNext() {
     if (!currentStory) return;
@@ -219,7 +224,12 @@ const Index = () => {
           {categories.map((category) => (
             <Button
               key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
+              onClick={() => {
+                setSelectedCategory(category.id);
+                if (currentStory) {
+                  cancelNarration();
+                }
+              }}
               className={`bg-green-600 hover:bg-green-700 text-white ${
                 selectedCategory === category.id ? 'ring-2 ring-green-400' : ''
               }`}
