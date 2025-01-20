@@ -27,8 +27,10 @@ const Index = () => {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-ES';
     utterance.rate = 0.9;
-    speechSynthesis.cancel(); // Cancelar cualquier síntesis previa
-    speechSynthesis.speak(utterance);
+    if (!isPlaying) {
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
+    }
   };
 
   const showFeedback = (message: string) => {
@@ -72,8 +74,11 @@ const Index = () => {
     onPlayPause: () => {
       setLastCommand("play_pause");
       if (currentStory) {
-        showFeedback(isPlaying ? "Pausando cuento" : "Reanudando cuento");
-        handlePlayPause();
+        const message = isPlaying ? "Pausando cuento" : "Reanudando cuento";
+        showFeedback(message);
+        setTimeout(() => {
+          handlePlayPause();
+        }, 1000);
       } else {
         showFeedback("No hay ningún cuento seleccionado");
       }
@@ -93,22 +98,28 @@ const Index = () => {
         if (currentStory) {
           cancelNarration();
         }
-        setTimeout(() => handlePlayStory(found), 1000);
+        setTimeout(() => {
+          handlePlayStory(found);
+        }, 1000);
       } else {
         showFeedback("No se encontró esa historia en la sección actual");
       }
     },
     onListStories: () => {
       setLastCommand("list");
-      listCurrentStories();
+      setTimeout(() => {
+        listCurrentStories();
+      }, 500);
     },
     onSetCategory: (cat) => {
       setLastCommand("set_category");
       showFeedback(`Cambiando a la sección ${mapCategory(cat)}`);
-      setSelectedCategory(cat);
-      if (currentStory) {
-        cancelNarration();
-      }
+      setTimeout(() => {
+        setSelectedCategory(cat);
+        if (currentStory) {
+          cancelNarration();
+        }
+      }, 500);
     },
     onNext: () => {
       setLastCommand("next");
@@ -124,7 +135,9 @@ const Index = () => {
       setLastCommand("pause");
       if (currentStory && isPlaying) {
         showFeedback("Pausando cuento");
-        handlePause();
+        setTimeout(() => {
+          handlePause();
+        }, 1000);
       } else {
         showFeedback("No hay ningún cuento reproduciéndose");
       }
@@ -169,7 +182,7 @@ const Index = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [voiceControlActive, startVoiceControl, stopRecognition, showFeedback]);
+  }, [voiceControlActive, startVoiceControl, stopRecognition]);
 
   function handleNext() {
     if (!currentStory) return;
@@ -217,10 +230,10 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-story-background text-white">
+    <div className="min-h-screen bg-gray-900 text-white">
       <main className="container py-8">
         <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 text-primary" tabIndex={0}>
+          <h1 className="text-4xl font-bold mb-4 text-green-400" tabIndex={0}>
             Cuentacuentos Accesible
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8" tabIndex={0}>
@@ -228,8 +241,8 @@ const Index = () => {
           </p>
           <Button
             onClick={startVoiceControl}
-            className={`bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto ${
-              voiceControlActive ? 'ring-2 ring-primary' : ''
+            className={`bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto ${
+              voiceControlActive ? 'ring-2 ring-green-400' : ''
             }`}
           >
             <Mic className="w-5 h-5" />
@@ -237,7 +250,7 @@ const Index = () => {
           </Button>
         </header>
 
-        <div className="mb-8 flex gap-4 justify-center">
+        <div className="mb-8 flex gap-4 justify-center flex-wrap">
           {categories.map((category) => (
             <Button
               key={category.id}
@@ -247,8 +260,8 @@ const Index = () => {
                   cancelNarration();
                 }
               }}
-              className={`bg-primary hover:bg-primary-hover text-white ${
-                selectedCategory === category.id ? 'ring-2 ring-primary' : ''
+              className={`bg-gray-800 hover:bg-gray-700 text-white ${
+                selectedCategory === category.id ? 'ring-2 ring-green-400' : ''
               }`}
             >
               {category.name}
