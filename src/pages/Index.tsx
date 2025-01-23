@@ -32,13 +32,29 @@ const Index = () => {
         startVoiceControl();
       } else if (event.key.toLowerCase() === 'z') {
         event.preventDefault();
+        stopVoiceControl();
         speakCommands();
+      } else if (event.key.toLowerCase() === 'x') {
+        event.preventDefault();
+        stopVoiceControl();
+        toast({
+          title: "Control por voz desactivado",
+          description: "El control por voz ha sido desactivado con éxito.",
+          variant: "default",
+        });
+        speakFeedback("El control por voz ha sido desactivado.");
       }
     };
-
+  
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
+  
+  const stopVoiceControl = () => {
+    setVoiceControlActive(false); 
+    console.log("Control por voz desactivado.");
+  };
+
 
   const speakCommands = () => {
     if (!window.speechSynthesis) {
@@ -53,6 +69,7 @@ const Index = () => {
     window.speechSynthesis.cancel();
  
     const commands = `
+      El comando de voz no desactivado
       Comandos disponibles:
       Z: Escuchar lista de comandos
       Control: Activar control por voz
