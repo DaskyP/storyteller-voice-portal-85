@@ -65,27 +65,56 @@ const Index = () => {
       });
       return;
     }
-
+  
     window.speechSynthesis.cancel();
- 
+  
     const commands = `
-      El comando de voz no desactivado
-      Comandos disponibles:
-      Z: Escuchar lista de comandos
-      Control: Activar control por voz
-      Comandos de voz:
-      "dormir": Ir a sección para dormir
-      "diversión": Ir a sección de diversión
-      "educativo": Ir a sección educativa
-      "aventuras": Ir a sección de aventuras
-      "reproducir" seguido del título del cuento: Para reproducir un cuento específico de la sección
-    `;
-
-    const utterance = new SpeechSynthesisUtterance(commands);
-    utterance.lang = 'es-ES';
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
+    Comandos disponibles:
+    - Z: Escuchar lista de comandos.
+    - Control: Activar control por voz.
+    Comandos de voz:
+    - "dormir": Ir a sección para dormir.
+    - "diversión": Ir a sección de diversión.
+    - "educativo": Ir a sección educativa.
+    - "aventuras": Ir a sección de aventuras.
+    - "reproducir" seguido del título del cuento: Para reproducir un cuento específico de la sección.
+  `;
+  
+    const splitCommands = commands.match(/[^\.!\?]+[\.!\?]+/g) || []; // Divide el texto en oraciones
+  
+    // Función para dividir el texto en chunks de 150 palabras aproximadamente
+    const chunkText = (text, limit = 150) => {
+      const words = text.split(' ');
+      let chunks = [];
+      while (words.length) {
+        chunks.push(words.splice(0, limit).join(' '));
+      }
+      return chunks;
+    };
+  
+    // Crear los chunks
+    const chunks = splitCommands.reduce((acc, sentence) => {
+      const chunkedSentences = chunkText(sentence);
+      return acc.concat(chunkedSentences);
+    }, []);
+  
+    // Leer cada chunk
+    const speakChunk = (index) => {
+      if (index >= chunks.length) return;
+      
+      const utterance = new SpeechSynthesisUtterance(chunks[index]);
+      utterance.lang = 'es-ES';
+      utterance.rate = 0.9;
+  
+      utterance.onend = () => speakChunk(index + 1); // Leer el siguiente chunk después de terminar este
+      window.speechSynthesis.speak(utterance);
+    };
+  
+    // Iniciar la lectura desde el primer chunk
+    speakChunk(0);
   };
+  
+  
 
   const listCurrentStories = () => {
     const filtered = selectedCategory 
