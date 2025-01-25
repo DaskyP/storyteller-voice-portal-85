@@ -12,12 +12,12 @@ interface StoryCardProps {
 const StoryCard = ({ title, description, duration, onPlay }: StoryCardProps) => {
   return (
     <div 
-      className="bg-story-background border border-story-border rounded-lg p-6 hover:bg-story-hover transition-colors"
+      className="bg-[#1A1A1A] border border-story-border rounded-lg p-6 hover:bg-story-hover transition-colors"
       role="article"
       aria-label={`Cuento: ${title}`}
     >
-      <h2 className="text-2xl font-bold mb-2 text-primary" tabIndex={0}>{title}</h2>
-      <p className="text-lg mb-4 text-gray-300" tabIndex={0}>{description}</p>
+      <h2 className="text-2xl font-bold mb-2" tabIndex={0}>{title}</h2>
+      <p className="text-lg mb-4 text-gray-600" tabIndex={0}>{description}</p>
       <div className="flex items-center justify-between">
         <span className="text-gray-400" tabIndex={0}>Duración: {duration}</span>
         <Button
