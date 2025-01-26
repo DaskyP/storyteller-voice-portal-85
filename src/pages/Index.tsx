@@ -130,7 +130,7 @@ const Index = () => {
 
     let msg = `En la sección ${getCategoryName(selectedCategory!)}, los cuentos disponibles son: `
     filtered.forEach((s, i) => {
-      msg += s.title + (i < filtered.length - 1 ? ', ' : '.')
+      msg += s.title + s.description + (i < filtered.length - 1 ? ', ' : '.')
     })
 
     speakFeedback(msg)

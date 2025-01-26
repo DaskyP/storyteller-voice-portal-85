@@ -8,7 +8,7 @@ export const stories: Story[] = [
   {
     id: 1,
     title: "El Principito",
-    description: "Un clásico de Antoine de Saint-Exupéry sobre un pequeño príncipe que viaja por diferentes planetas.",
+    description: "Un clásico que habla de un pequeño príncipe que viaja por diferentes planetas.",
     duration: "45 minutos",
     category: "educational",
     content: elPrincipito
