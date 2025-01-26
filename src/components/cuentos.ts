@@ -46,23 +46,32 @@ trayendo paz y amor entre sirenas y humanos.
 
 
 export const elPrincipito = `
-En un pequeño planeta vivía un niño llamado el Principito. Su hogar era tan pequeño que podía ver el atardecer 
-tantas veces como quisiera simplemente moviendo su silla. En su planeta también había tres volcanes, uno de ellos 
-inactivo, y una rosa que él cuidaba con devoción, aunque la rosa era vanidosa y algo exigente.
+Había una vez un pequeño príncipe que vivía en un planeta apenas más grande que él. En su hogar, había tres volcanes, dos activos y uno apagado, 
+y una flor muy hermosa, aunque un poco vanidosa, a la que él cuidaba con gran dedicación. Un día, sintiéndose incomprendido por su flor, 
+decidió dejar su planeta y explorar el universo.
 
-Un día, el Principito decidió explorar otros mundos y dejó su planeta. En sus viajes, conoció a personajes muy 
-peculiares: un rey que gobernaba a nadie, un hombre vanidoso que solo quería ser admirado, un hombre de negocios 
-que contaba estrellas, un farolero que encendía y apagaba su farol sin descanso, y un geógrafo que no conocía su 
-propio mundo. Cada uno le enseñó algo sobre la naturaleza humana.
+En su viaje, visitó varios planetas, cada uno habitado por un personaje curioso. En el primero, vivía un rey que gobernaba sobre nadie más que 
+él mismo. En el segundo, un vanidoso que solo quería ser admirado. En el tercero, un hombre de negocios obsesionado con contar estrellas, 
+afirmando que le pertenecían. Cada encuentro dejó al principito reflexionando sobre las absurdas prioridades de los adultos.
 
-Finalmente, el Principito llegó a la Tierra, donde conoció a un zorro que le habló sobre la importancia de los lazos 
-y de ver con el corazón, porque "lo esencial es invisible a los ojos". También se encontró con un piloto perdido en 
-el desierto, quien escuchó atentamente sus historias. Mientras el piloto reparaba su avión, el Principito le mostró 
-la pureza de su visión del mundo y lo ayudó a redescubrir lo verdaderamente importante.
+Cuando llegó a la Tierra, encontró un mundo vasto y lleno de vida. En el desierto, conoció a un zorro que le pidió ser domesticado. Al principito 
+le intrigó esta idea, y el zorro le explicó: "Domesticar es crear lazos. Una vez que me domestiques, seremos únicos el uno para el otro". 
+El zorro le enseñó una valiosa lección: "Lo esencial es invisible a los ojos. Solo se ve bien con el corazón".
 
-Al final, el Principito decidió regresar a su planeta para cuidar de su rosa, dejando al piloto con un valioso recuerdo: 
-un niño que le enseñó a mirar las estrellas y a recordar que la verdadera riqueza está en los lazos que formamos.
+Mientras exploraba la Tierra, el principito se encontró con un jardín lleno de rosas. Al principio, se sintió triste al pensar que su flor no 
+era especial. Pero luego recordó las palabras del zorro y comprendió que su flor era única porque él la había cuidado y amado.
+
+En el desierto, también conoció a un aviador que había caído allí con su avión. Juntos compartieron reflexiones profundas sobre la vida, la amistad 
+y la importancia de cuidar aquello que amamos. El principito le dejó al aviador un mensaje antes de partir: "Cuando mires las estrellas, pensarás 
+en mí. Será como si todas rieran para ti".
+
+El principito regresó a su planeta, sabiendo que su flor lo esperaba. Había aprendido que los lazos que creamos con los demás son lo que da sentido 
+a nuestras vidas.
+
+Este cuento nos recuerda que las cosas más importantes no se ven con los ojos, sino con el corazón. Nunca olvides cuidar aquello que amas.
 `;
+
+
 
 export const caperucitaRoja = `
 Había una vez una niña llamada Caperucita Roja, que siempre llevaba una capa roja hecha por su abuela. Un día, su madre le pidió 
