@@ -27,7 +27,7 @@ export default {
         story: {
           background: "#F8FAFC",
           border: "#333333",
-          hover: "#F1F5F9"
+          hover: "#494848"
         },
         primary: {
           DEFAULT: "#1E40AF",
